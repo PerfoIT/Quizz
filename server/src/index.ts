@@ -8,6 +8,7 @@ import { prisma } from "./db.js";
 import { adminRouter } from "./routes/admin.js";
 import { authRouter } from "./routes/auth.js";
 import { quizzesRouter } from "./routes/quizzes.js";
+import { sessionsRouter } from "./routes/sessions.js";
 import { registerSockets } from "./socket.js";
 
 const app = express();
@@ -24,6 +25,7 @@ app.get("/health", (_req, res) => {
 app.use("/api/quizzes", quizzesRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/auth", authRouter);
+app.use("/api/sessions", sessionsRouter);
 
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   const message = err instanceof Error ? err.message : "Erreur serveur.";

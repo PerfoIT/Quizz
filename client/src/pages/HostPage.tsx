@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { BrandShell } from "../components/BrandShell";
 import { Logo } from "../components/Logo";
 import { QRCodePanel } from "../components/QRCodePanel";
-import { clearAuthToken, fetchQuizzes, getAuthToken } from "../lib/api";
+import { clearAuthToken, createHostSession, fetchQuizzes, getAuthToken } from "../lib/api";
 import { socket } from "../lib/socket";
 import type { Quiz, RevealedQuestion, SessionSnapshot, SocketAck } from "../lib/types";
 import { getJoinUrl } from "../lib/urls";
@@ -17,6 +17,7 @@ export default function HostPage() {
   const [snapshot, setSnapshot] = useState<SessionSnapshot | null>(null);
   const [revealed, setRevealed] = useState<RevealedQuestion | null>(null);
   const [error, setError] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     fetchQuizzes()
@@ -44,16 +45,36 @@ export default function HostPage() {
 
   function emit<T>(event: string, payload: Record<string, unknown>) {
     setError("");
-    socket.emit(event, { ...payload, token: getAuthToken() }, (ack: SocketAck<T>) => {
+    if (!socket.connected) socket.connect();
+    socket.timeout(5000).emit(event, { ...payload, token: getAuthToken() }, (timeoutError: Error | null, ack: SocketAck<T>) => {
+      if (timeoutError) {
+        setError("Connexion temps reel indisponible. Verifiez le proxy /socket.io puis rechargez la page.");
+        return;
+      }
       if (!ack.ok) setError(ack.error);
       if (ack.ok && "snapshot" in ack) setSnapshot((ack as { snapshot: SessionSnapshot }).snapshot);
       if (ack.ok && "revealedQuestion" in ack) setRevealed((ack as { revealedQuestion: RevealedQuestion }).revealedQuestion);
     });
   }
 
-  function createSession() {
-    if (!quizId) return;
-    emit("host:createSession", { quizId });
+  async function createSession() {
+    if (!quizId) {
+      setError("Aucun quiz disponible. Creez ou partagez un quiz dans l'administration.");
+      return;
+    }
+
+    setError("");
+    setIsCreating(true);
+    try {
+      const nextSnapshot = await createHostSession(quizId);
+      setSnapshot(nextSnapshot);
+      if (!socket.connected) socket.connect();
+      socket.emit("host:watchSession", { sessionCode: nextSnapshot.code });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Impossible de creer la session.");
+    } finally {
+      setIsCreating(false);
+    }
   }
 
   const current = snapshot?.currentQuestion;
@@ -116,9 +137,10 @@ export default function HostPage() {
             <button
               type="button"
               onClick={createSession}
+              disabled={isCreating}
               className="mt-4 w-full rounded-md bg-perfo-blue px-4 py-3 font-bold text-white shadow-glow hover:bg-blue-500"
             >
-              Creer une session
+              {isCreating ? "Creation..." : "Creer une session"}
             </button>
 
             {snapshot && (

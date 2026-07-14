@@ -1,4 +1,4 @@
-import type { AdminQuiz, AuthUser, BankQuestion, Quiz } from "./types";
+import type { AdminQuiz, AuthUser, BankQuestion, Quiz, SessionSnapshot } from "./types";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL || "";
 const tokenKey = "perfo-auth-token";
@@ -44,6 +44,20 @@ export async function fetchMe(): Promise<AuthUser> {
 
 export async function fetchBankQuestions(token: string): Promise<BankQuestion[]> {
   return adminFetch(token, "/api/admin/questions");
+}
+
+export async function createHostSession(quizId: string): Promise<SessionSnapshot> {
+  const response = await fetch(`${serverUrl}/api/sessions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders()
+    },
+    body: JSON.stringify({ quizId })
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error ?? "Impossible de creer la session.");
+  return data;
 }
 
 export async function fetchAdminQuizzes(token: string): Promise<AdminQuiz[]> {
