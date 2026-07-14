@@ -21,6 +21,7 @@ export type PublicAnswer = {
 };
 
 export type PublicQuestion = {
+  sourceBankQuestionId: string | null;
   type: "QCM" | "IMAGE" | "OTHER";
   order: number;
   text: string;
@@ -78,5 +79,16 @@ export type BankQuestion = {
   imageUrl: string | null;
   timeLimitSeconds: number;
   answers: BankAnswer[];
+  tagLabels?: string[];
+};
+
+export type AdminQuiz = {
+  id: string;
+  owner?: { name: string; email: string };
+  visibility: "PRIVATE" | "ORGANIZATION";
+  title: string;
+  description: string | null;
+  createdAt: string;
+  questions: PublicQuestion[];
   tagLabels?: string[];
 };

@@ -121,6 +121,7 @@ async function main() {
     const savedQuestion = await prisma.question.upsert({
       where: { quizId_order: { quizId: quiz.id, order: index } },
       update: {
+        sourceBankQuestionId: bankQuestion.id,
         type: "QCM",
         text: question.text,
         explanation: question.explanation,
@@ -128,6 +129,7 @@ async function main() {
       },
       create: {
         quizId: quiz.id,
+        sourceBankQuestionId: bankQuestion.id,
         type: "QCM",
         order: index,
         text: question.text,

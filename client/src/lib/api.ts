@@ -1,4 +1,4 @@
-import type { AuthUser, BankQuestion, Quiz } from "./types";
+import type { AdminQuiz, AuthUser, BankQuestion, Quiz } from "./types";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL || "";
 const tokenKey = "perfo-auth-token";
@@ -44,6 +44,10 @@ export async function fetchMe(): Promise<AuthUser> {
 
 export async function fetchBankQuestions(token: string): Promise<BankQuestion[]> {
   return adminFetch(token, "/api/admin/questions");
+}
+
+export async function fetchAdminQuizzes(token: string): Promise<AdminQuiz[]> {
+  return adminFetch(token, "/api/admin/quizzes");
 }
 
 export async function createBankQuestion(
@@ -102,4 +106,15 @@ async function adminFetch<T>(token: string, path: string, init?: RequestInit): P
 function authHeaders(): Record<string, string> {
   const token = getAuthToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+export async function updateAdminQuiz(
+  token: string,
+  quizId: string,
+  payload: { title: string; description?: string; visibility: "PRIVATE" | "ORGANIZATION"; tags: string[]; questionIds: string[] }
+) {
+  return adminFetch(token, `/api/admin/quizzes/${quizId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload)
+  });
 }

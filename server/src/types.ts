@@ -20,6 +20,7 @@ export type PublicAnswer = {
 };
 
 export type PublicQuestion = {
+  sourceBankQuestionId: string | null;
   type: "QCM" | "IMAGE" | "OTHER";
   order: number;
   text: string;

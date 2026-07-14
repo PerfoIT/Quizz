@@ -154,7 +154,7 @@ export default function PlayerPage() {
               <div className="mt-6">
                 {revealed.imageUrl && <img src={revealed.imageUrl} alt="" className="mb-4 max-h-56 w-full rounded-lg object-cover" />}
                 <AnswerGrid answers={revealed.answers} selected={selected} correctAnswerOrder={revealed.correctAnswerOrder} disabled />
-                <p className="mt-5 rounded-lg border border-emerald-300/25 bg-emerald-400/15 p-4 text-emerald-50">{revealed.explanation}</p>
+                {revealed.explanation && <p className="mt-5 rounded-lg border border-emerald-300/25 bg-emerald-400/15 p-4 text-emerald-50">{revealed.explanation}</p>}
                 {answerResult && (
                   <div className="mt-4 rounded-lg border border-white/10 bg-white/10 p-4 text-xl font-black">
                     {answerResult.isCorrect ? `+${answerResult.points} points` : "0 point"}

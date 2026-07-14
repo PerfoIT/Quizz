@@ -21,7 +21,7 @@ const answerSchema = z.object({
 const bankQuestionSchema = z.object({
   type: z.enum(["QCM", "IMAGE", "OTHER"]).default("QCM"),
   text: z.string().trim().min(1).max(500),
-  explanation: z.string().trim().min(1).max(1200),
+  explanation: z.string().trim().max(1200).optional().or(z.literal("")),
   imageUrl: z.string().trim().url().optional().or(z.literal("")),
   timeLimitSeconds: z.number().int().min(5).max(120).default(15),
   visibility: visibilitySchema,
@@ -80,7 +80,7 @@ adminRouter.post("/questions", async (req, res, next) => {
         visibility: payload.visibility,
         type: payload.type,
         text: payload.text,
-        explanation: payload.explanation,
+        explanation: payload.explanation ?? "",
         imageUrl: normalizeOptional(payload.imageUrl),
         timeLimitSeconds: payload.timeLimitSeconds,
         answers: {
@@ -158,8 +158,9 @@ adminRouter.post("/quizzes", async (req, res, next) => {
         questions: {
           create: orderedQuestions.map((question, questionIndex) => ({
             type: question.type,
+            sourceBankQuestionId: question.id,
             text: question.text,
-            explanation: question.explanation,
+            explanation: question.explanation ?? "",
             imageUrl: question.imageUrl,
             timeLimitSeconds: question.timeLimitSeconds,
             order: questionIndex,
@@ -185,6 +186,92 @@ adminRouter.post("/quizzes", async (req, res, next) => {
     });
 
     res.status(201).json(withFlatTags(quiz));
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.put("/quizzes/:id", async (req, res, next) => {
+  try {
+    const user = (req as AuthenticatedRequest).user;
+    const payload = quizSchema.parse(req.body);
+    const quiz = await prisma.quiz.findFirst({
+      where: writableWhere(req.params.id, user.id, user.role)
+    });
+
+    if (!quiz) {
+      res.status(404).json({ error: "Quiz introuvable ou non modifiable." });
+      return;
+    }
+
+    const bankQuestions = await prisma.bankQuestion.findMany({
+      where: { id: { in: payload.questionIds }, ...accessibleWhere(user.id) },
+      include: { answers: { orderBy: { order: "asc" } } }
+    });
+
+    if (bankQuestions.length !== payload.questionIds.length) {
+      res.status(400).json({ error: "Certaines questions selectionnees sont introuvables ou non partagees." });
+      return;
+    }
+
+    const orderedQuestions = payload.questionIds.map((id) => {
+      const question = bankQuestions.find((item) => item.id === id);
+      if (!question) throw new Error("Question introuvable.");
+      return question;
+    });
+    const tagIds = await upsertTags(payload.tags);
+
+    await prisma.$transaction([
+      prisma.quizTag.deleteMany({ where: { quizId: quiz.id } }),
+      prisma.question.deleteMany({ where: { quizId: quiz.id } }),
+      prisma.quiz.update({
+        where: { id: quiz.id },
+        data: {
+          title: payload.title,
+          description: normalizeOptional(payload.description),
+          visibility: payload.visibility,
+          tags: { create: tagIds.map((tagId) => ({ tagId })) },
+          questions: {
+            create: orderedQuestions.map((question, questionIndex) => ({
+              type: question.type,
+              sourceBankQuestionId: question.id,
+              text: question.text,
+              explanation: question.explanation ?? "",
+              imageUrl: question.imageUrl,
+              timeLimitSeconds: question.timeLimitSeconds,
+              order: questionIndex,
+              answers: {
+                create: question.answers.map((answer) => ({
+                  text: answer.text,
+                  imageUrl: answer.imageUrl,
+                  isCorrect: answer.isCorrect,
+                  order: answer.order
+                }))
+              }
+            }))
+          }
+        }
+      })
+    ]);
+
+    const updatedQuiz = await prisma.quiz.findUnique({
+      where: { id: quiz.id },
+      include: {
+        owner: { select: { name: true, email: true } },
+        tags: { include: { tag: true } },
+        questions: {
+          include: { answers: { orderBy: { order: "asc" } } },
+          orderBy: { order: "asc" }
+        }
+      }
+    });
+
+    if (!updatedQuiz) {
+      res.status(404).json({ error: "Quiz introuvable." });
+      return;
+    }
+
+    res.json(withFlatTags(updatedQuiz));
   } catch (error) {
     next(error);
   }
@@ -224,6 +311,10 @@ function accessibleWhere(userId: string) {
   return {
     OR: [{ ownerId: userId }, { visibility: "ORGANIZATION" as const }]
   };
+}
+
+function writableWhere(id: string, userId: string, role: "ADMIN" | "TRAINER") {
+  return role === "ADMIN" ? { id } : { id, ownerId: userId };
 }
 
 async function upsertTags(labels: string[]) {

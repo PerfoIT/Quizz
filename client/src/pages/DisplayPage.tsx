@@ -114,7 +114,7 @@ function Reveal({ snapshot, revealed }: { snapshot: SessionSnapshot; revealed: R
       <div className="mt-8">
         <AnswerGrid answers={question.answers} correctAnswerOrder={revealed?.correctAnswerOrder} disabled />
       </div>
-      {revealed && <p className="mt-8 rounded-lg border border-emerald-300/25 bg-emerald-400/15 p-6 text-2xl text-emerald-50">{revealed.explanation}</p>}
+      {revealed?.explanation && <p className="mt-8 rounded-lg border border-emerald-300/25 bg-emerald-400/15 p-6 text-2xl text-emerald-50">{revealed.explanation}</p>}
     </section>
   );
 }

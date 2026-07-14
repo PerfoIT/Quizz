@@ -75,7 +75,13 @@ La zone admin est disponible sur:
 
 Le premier administrateur est cree automatiquement au demarrage du serveur a partir de `ADMIN_EMAIL` et `ADMIN_PASSWORD`.
 
-La zone admin permet de creer des utilisateurs formateurs, une banque de questions, puis un quiz en selectionnant les questions de cette banque. Types prevus:
+La zone admin est organisee en onglets:
+
+- `Questions`: creation et consultation de la banque de questions
+- `Quiz`: creation, consultation et modification des quiz existants
+- `Utilisateurs`: creation de comptes formateurs/admins
+
+Elle permet de creer des utilisateurs formateurs, une banque de questions, puis un quiz en selectionnant les questions de cette banque. Types prevus:
 
 - `QCM`: reponses texte classiques
 - `IMAGE`: question ou reponses avec URL d'image
@@ -89,6 +95,8 @@ Les questions et quiz appartiennent a un utilisateur et peuvent etre:
 - `ORGANIZATION`: partages avec les autres formateurs
 
 Des etiquettes peuvent etre ajoutees aux questions et quiz pour preparer les filtres et le rangement par thematique.
+
+L'explication d'une question est optionnelle. Si elle est vide, la revelation affiche seulement la bonne reponse.
 
 ## Scoring
 

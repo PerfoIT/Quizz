@@ -161,7 +161,7 @@ export default function HostPage() {
                     Question {snapshot.currentQuestionIndex + 1} / {snapshot.quiz.questionCount}
                   </div>
                   <div className="mt-2 text-2xl font-bold">{current.text}</div>
-                  {revealed && <div className="mt-4 rounded-md bg-emerald-400/15 p-4 text-emerald-50">{revealed.explanation}</div>}
+                  {revealed?.explanation && <div className="mt-4 rounded-md bg-emerald-400/15 p-4 text-emerald-50">{revealed.explanation}</div>}
                 </div>
               )}
             </section>

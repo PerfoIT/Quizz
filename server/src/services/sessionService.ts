@@ -256,6 +256,7 @@ function getCurrentQuestion(session: SessionWithQuiz) {
 
 function toPublicQuestion(question: Question & { answers: Answer[] }): PublicQuestion {
   return {
+    sourceBankQuestionId: question.sourceBankQuestionId,
     type: question.type,
     order: question.order,
     text: question.text,

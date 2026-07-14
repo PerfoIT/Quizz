@@ -112,6 +112,7 @@ model Quiz {
 model Question {
   id               String     @id @default(cuid())
   quizId           String
+  sourceBankQuestionId String?
   type             QuestionType @default(QCM)
   text             String
   explanation      String
