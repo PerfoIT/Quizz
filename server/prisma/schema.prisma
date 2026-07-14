@@ -1,0 +1,180 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SessionStatus {
+  WAITING
+  QUESTION
+  REVEAL
+  LEADERBOARD
+  FINISHED
+}
+
+enum QuestionType {
+  QCM
+  IMAGE
+  OTHER
+}
+
+enum UserRole {
+  ADMIN
+  TRAINER
+}
+
+enum Visibility {
+  PRIVATE
+  ORGANIZATION
+}
+
+model User {
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  passwordHash  String
+  role          UserRole       @default(TRAINER)
+  createdAt     DateTime       @default(now())
+  bankQuestions BankQuestion[]
+  quizzes       Quiz[]
+  sessions      Session[]
+}
+
+model Tag {
+  id            String            @id @default(cuid())
+  label         String            @unique
+  createdAt     DateTime          @default(now())
+  bankQuestions BankQuestionTag[]
+  quizzes       QuizTag[]
+}
+
+model BankQuestionTag {
+  bankQuestionId String
+  tagId          String
+  bankQuestion   BankQuestion @relation(fields: [bankQuestionId], references: [id], onDelete: Cascade)
+  tag            Tag          @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([bankQuestionId, tagId])
+}
+
+model QuizTag {
+  quizId String
+  tagId  String
+  quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([quizId, tagId])
+}
+
+model BankQuestion {
+  id               String       @id @default(cuid())
+  ownerId          String?
+  visibility       Visibility   @default(PRIVATE)
+  type             QuestionType @default(QCM)
+  text             String
+  explanation      String
+  imageUrl         String?
+  timeLimitSeconds Int          @default(15)
+  createdAt        DateTime     @default(now())
+  owner            User?        @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  answers          BankAnswer[]
+  tags             BankQuestionTag[]
+}
+
+model BankAnswer {
+  id             String       @id @default(cuid())
+  bankQuestionId String
+  text           String
+  imageUrl       String?
+  isCorrect      Boolean
+  order          Int
+  bankQuestion   BankQuestion @relation(fields: [bankQuestionId], references: [id], onDelete: Cascade)
+
+  @@unique([bankQuestionId, order])
+}
+
+model Quiz {
+  id          String     @id @default(cuid())
+  ownerId     String?
+  visibility  Visibility @default(PRIVATE)
+  title       String
+  description String?
+  createdAt   DateTime   @default(now())
+  owner       User?       @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  questions   Question[]
+  sessions    Session[]
+  tags        QuizTag[]
+}
+
+model Question {
+  id               String     @id @default(cuid())
+  quizId           String
+  type             QuestionType @default(QCM)
+  text             String
+  explanation      String
+  imageUrl         String?
+  timeLimitSeconds Int
+  order            Int
+  quiz             Quiz       @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  answers          Answer[]
+  responses        Response[]
+
+  @@unique([quizId, order])
+}
+
+model Answer {
+  id         String     @id @default(cuid())
+  questionId String
+  text       String
+  imageUrl   String?
+  isCorrect  Boolean
+  order      Int
+  question   Question   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  responses  Response[]
+
+  @@unique([questionId, order])
+}
+
+model Session {
+  id                   String        @id @default(cuid())
+  code                 String        @unique
+  quizId               String
+  hostId               String?
+  status               SessionStatus @default(WAITING)
+  currentQuestionIndex Int           @default(0)
+  questionStartedAt    DateTime?
+  createdAt            DateTime      @default(now())
+  host                 User?         @relation(fields: [hostId], references: [id], onDelete: SetNull)
+  quiz                 Quiz          @relation(fields: [quizId], references: [id])
+  participants         Participant[]
+}
+
+model Participant {
+  id        String     @id @default(cuid())
+  sessionId String
+  name      String
+  socketId  String?
+  score     Int        @default(0)
+  joinedAt  DateTime   @default(now())
+  session   Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  responses Response[]
+}
+
+model Response {
+  id             String      @id @default(cuid())
+  participantId  String
+  questionId     String
+  answerId       String
+  isCorrect      Boolean
+  responseTimeMs Int
+  points         Int
+  createdAt      DateTime    @default(now())
+  participant    Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  question       Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answer         Answer      @relation(fields: [answerId], references: [id], onDelete: Cascade)
+
+  @@unique([participantId, questionId])
+}
