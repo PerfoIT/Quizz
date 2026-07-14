@@ -10,6 +10,7 @@ const createSessionSchema = z.object({
   quizId: z.string().min(1),
   name: z.string().trim().max(120).optional().or(z.literal(""))
 });
+const sessionIdSchema = z.object({ id: z.string().min(1) });
 
 sessionsRouter.get("/", requireAuth, async (req, res, next) => {
   try {
@@ -49,8 +50,9 @@ sessionsRouter.get("/", requireAuth, async (req, res, next) => {
 sessionsRouter.delete("/:id", requireAuth, async (req, res, next) => {
   try {
     const user = (req as unknown as AuthenticatedRequest).user;
+    const { id } = sessionIdSchema.parse(req.params);
     const session = await prisma.session.findFirst({
-      where: user.role === "ADMIN" ? { id: req.params.id } : { id: req.params.id, hostId: user.id },
+      where: user.role === "ADMIN" ? { id } : { id, hostId: user.id },
       select: { id: true }
     });
 
