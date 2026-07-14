@@ -1,4 +1,4 @@
-import type { AdminQuiz, AuthUser, BankQuestion, Quiz, SessionSnapshot } from "./types";
+import type { AdminQuiz, AuthUser, BankQuestion, Quiz, SessionHistoryItem, SessionSnapshot } from "./types";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL || "";
 const tokenKey = "perfo-auth-token";
@@ -46,17 +46,26 @@ export async function fetchBankQuestions(token: string): Promise<BankQuestion[]>
   return adminFetch(token, "/api/admin/questions");
 }
 
-export async function createHostSession(quizId: string): Promise<SessionSnapshot> {
+export async function createHostSession(quizId: string, name: string): Promise<SessionSnapshot> {
   const response = await fetch(`${serverUrl}/api/sessions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       ...authHeaders()
     },
-    body: JSON.stringify({ quizId })
+    body: JSON.stringify({ quizId, name })
   });
   const data = await response.json();
   if (!response.ok) throw new Error(data.error ?? "Impossible de creer la session.");
+  return data;
+}
+
+export async function fetchSessionHistory(): Promise<SessionHistoryItem[]> {
+  const response = await fetch(`${serverUrl}/api/sessions`, {
+    headers: authHeaders()
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error ?? "Impossible de charger l'historique.");
   return data;
 }
 
@@ -86,7 +95,7 @@ export async function createBankQuestion(
 
 export async function createAdminQuiz(
   token: string,
-  payload: { title: string; description?: string; visibility: "PRIVATE" | "ORGANIZATION"; tags: string[]; questionIds: string[] }
+  payload: { title: string; description?: string; visibility: "PRIVATE" | "ORGANIZATION"; paceMode: "AUTO" | "MANUAL"; tags: string[]; questionIds: string[] }
 ) {
   return adminFetch(token, "/api/admin/quizzes", {
     method: "POST",
@@ -147,7 +156,7 @@ export async function updateBankQuestion(
 export async function updateAdminQuiz(
   token: string,
   quizId: string,
-  payload: { title: string; description?: string; visibility: "PRIVATE" | "ORGANIZATION"; tags: string[]; questionIds: string[] }
+  payload: { title: string; description?: string; visibility: "PRIVATE" | "ORGANIZATION"; paceMode: "AUTO" | "MANUAL"; tags: string[]; questionIds: string[] }
 ) {
   return adminFetch(token, `/api/admin/quizzes/${quizId}`, {
     method: "PUT",

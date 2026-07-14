@@ -194,6 +194,10 @@ async function runQuestionCycle(io: Server, sessionCode: string) {
             io.to(room(sessionCode)).emit("session:finished", advancedSnapshot);
             return;
           }
+          if (revealSnapshot.quiz.paceMode === "MANUAL") {
+            io.to(room(sessionCode)).emit("leaderboard:updated", advancedSnapshot);
+            return;
+          }
           await runQuestionCycle(io, sessionCode);
         } catch (error) {
           emitRoomError(io, sessionCode, error);

@@ -16,6 +16,7 @@ export default function HostPage() {
   const [quizId, setQuizId] = useState("");
   const [snapshot, setSnapshot] = useState<SessionSnapshot | null>(null);
   const [revealed, setRevealed] = useState<RevealedQuestion | null>(null);
+  const [sessionName, setSessionName] = useState("");
   const [error, setError] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
@@ -66,7 +67,7 @@ export default function HostPage() {
     setError("");
     setIsCreating(true);
     try {
-      const nextSnapshot = await createHostSession(quizId);
+      const nextSnapshot = await createHostSession(quizId, sessionName);
       setSnapshot(nextSnapshot);
       if (!socket.connected) socket.connect();
       socket.emit("host:watchSession", { sessionCode: nextSnapshot.code });
@@ -80,7 +81,7 @@ export default function HostPage() {
   const current = snapshot?.currentQuestion;
   const canStart = snapshot?.status === "WAITING";
   const canReveal = snapshot?.status === "QUESTION";
-  const canNext = snapshot?.status === "REVEAL";
+  const canNext = snapshot?.status === "REVEAL" || snapshot?.status === "LEADERBOARD";
 
   return (
     <BrandShell>
@@ -134,6 +135,13 @@ export default function HostPage() {
                 </option>
               ))}
             </select>
+            <label className="mt-4 block text-sm font-semibold text-slate-200">Nom de session</label>
+            <input
+              value={sessionName}
+              onChange={(event) => setSessionName(event.target.value)}
+              placeholder="Ex: Formation IA groupe matin"
+              className="mt-2 w-full rounded-md border border-white/10 bg-slate-950 px-3 py-3 text-white"
+            />
             <button
               type="button"
               onClick={createSession}
@@ -159,7 +167,7 @@ export default function HostPage() {
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <div className="text-sm uppercase tracking-[0.22em] text-perfo-cyan">{snapshot?.status ?? "PRET"}</div>
-                  <h2 className="mt-2 text-3xl font-black">{snapshot?.quiz.title ?? "Aucune session active"}</h2>
+                  <h2 className="mt-2 text-3xl font-black">{snapshot?.name ?? snapshot?.quiz.title ?? "Aucune session active"}</h2>
                 </div>
                 {snapshot && (
                   <div className="flex flex-wrap gap-2">
@@ -201,9 +209,11 @@ export default function HostPage() {
                 </div>
               </div>
               <div className="glass rounded-lg p-5">
-                <h3 className="text-xl font-bold">Rythme automatique</h3>
+                <h3 className="text-xl font-bold">Rythme {snapshot?.quiz.paceMode === "MANUAL" ? "manuel" : "automatique"}</h3>
                 <p className="mt-3 text-slate-300">
-                  Une question dure 15 secondes. La bonne reponse est ensuite affichee quelques secondes, puis la question suivante demarre automatiquement.
+                  {snapshot?.quiz.paceMode === "MANUAL"
+                    ? "La question se revele a la fin du chrono, puis l'animateur passe manuellement a la suivante."
+                    : "La bonne reponse est affichee quelques secondes, puis la question suivante demarre automatiquement."}
                 </p>
                 {snapshot?.status === "FINISHED" && (
                   <div className="mt-4 rounded-lg border border-white/10 bg-white/5 p-4">

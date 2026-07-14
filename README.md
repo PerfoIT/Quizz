@@ -60,7 +60,7 @@ VITE_SERVER_URL=https://api.quiz.perfo.fr
 1. L'animateur se connecte, ouvre `/host`, choisit un quiz accessible et cree une session.
 2. L'ecran projete ouvre `/display/:sessionCode`.
 3. Les participants scannent le QR code ou ouvrent `/join/:sessionCode`.
-4. L'animateur demarre le quiz. Chaque question dure 15 secondes, puis l'application revele automatiquement la bonne reponse et passe a la question suivante. Le classement est affiche uniquement sur le podium final.
+4. L'animateur demarre le quiz. Chaque participant peut modifier sa reponse jusqu'a la fin du chrono. Selon le mode du quiz, l'application passe automatiquement a la question suivante ou attend l'action de l'animateur.
 
 ## Administration
 
@@ -79,6 +79,7 @@ La zone admin est organisee en onglets:
 
 - `Questions`: creation et consultation de la banque de questions
 - `Quiz`: creation, consultation et modification des quiz existants
+- `Historique`: consultation des sessions lancees et de leurs podiums
 - `Utilisateurs`: creation de comptes formateurs/admins
 
 Elle permet de creer des utilisateurs formateurs, une banque de questions, puis un quiz en selectionnant les questions de cette banque. Types prevus:
@@ -97,6 +98,13 @@ Les questions et quiz appartiennent a un utilisateur et peuvent etre:
 Des etiquettes peuvent etre ajoutees aux questions et quiz pour preparer les filtres et le rangement par thematique.
 
 L'explication d'une question est optionnelle. Si elle est vide, la revelation affiche seulement la bonne reponse.
+
+Chaque quiz peut utiliser un rythme:
+
+- `AUTO`: passage automatique apres la revelation
+- `MANUAL`: revelation automatique a la fin du chrono, puis passage manuel par l'animateur
+
+Chaque session peut etre nommee depuis `/host` afin de la retrouver dans l'historique.
 
 ## Scoring
 

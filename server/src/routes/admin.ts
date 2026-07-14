@@ -34,6 +34,7 @@ const quizSchema = z.object({
   title: z.string().trim().min(1).max(160),
   description: z.string().trim().max(800).optional().or(z.literal("")),
   visibility: visibilitySchema,
+  paceMode: z.enum(["AUTO", "MANUAL"]).default("AUTO"),
   tags: z.array(z.string().trim().min(1).max(40)).max(12).default([]),
   questionIds: z.array(z.string().min(1)).min(1)
 });
@@ -154,6 +155,7 @@ adminRouter.post("/quizzes", async (req, res, next) => {
       data: {
         ownerId: user.id,
         visibility: payload.visibility,
+        paceMode: payload.paceMode,
         title: payload.title,
         description: normalizeOptional(payload.description),
         tags: { create: tagIds.map((tagId) => ({ tagId })) },
@@ -298,6 +300,7 @@ adminRouter.put("/quizzes/:id", async (req, res, next) => {
           title: payload.title,
           description: normalizeOptional(payload.description),
           visibility: payload.visibility,
+          paceMode: payload.paceMode,
           tags: { create: tagIds.map((tagId) => ({ tagId })) },
           questions: {
             create: orderedQuestions.map((question, questionIndex) => ({

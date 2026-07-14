@@ -46,11 +46,12 @@ export async function listQuizzes(userId: string): Promise<PublicQuiz[]> {
     id: quiz.id,
     title: quiz.title,
     description: quiz.description,
-    questionCount: quiz._count.questions
+    questionCount: quiz._count.questions,
+    paceMode: quiz.paceMode
   }));
 }
 
-export async function createSession(quizId: string, hostId: string) {
+export async function createSession(quizId: string, hostId: string, name?: string) {
   const quiz = await prisma.quiz.findFirst({
     where: { id: quizId, OR: [{ ownerId: hostId }, { visibility: "ORGANIZATION" }] }
   });
@@ -66,7 +67,9 @@ export async function createSession(quizId: string, hostId: string) {
     if (!existing) break;
   }
 
-  await prisma.session.create({ data: { code, quizId, hostId } });
+  await prisma.session.create({
+    data: { code, quizId, hostId, name: sanitizeSessionName(name) || `${quiz.title} - ${code}` }
+  });
   return getSessionSnapshot(code);
 }
 
@@ -81,6 +84,7 @@ export async function getSessionSnapshot(code: string): Promise<SessionSnapshot>
 
   return {
     code: session.code,
+    name: session.name,
     status: session.status,
     currentQuestionIndex: session.currentQuestionIndex,
     questionStartedAt: session.questionStartedAt?.toISOString() ?? null,
@@ -89,7 +93,8 @@ export async function getSessionSnapshot(code: string): Promise<SessionSnapshot>
       id: session.quiz.id,
       title: session.quiz.title,
       description: session.quiz.description,
-      questionCount: session.quiz.questions.length
+      questionCount: session.quiz.questions.length,
+      paceMode: session.quiz.paceMode
     },
     participants: session.participants
       .sort((a, b) => a.joinedAt.getTime() - b.joinedAt.getTime())
@@ -206,8 +211,20 @@ export async function submitAnswer(participantId: string, answerOrder: number) {
     question.scoringGraceSeconds
   );
 
-  const response = await prisma.response.create({
-    data: {
+  const previousResponse = await prisma.response.findUnique({
+    where: { participantId_questionId: { participantId, questionId: question.id } }
+  });
+
+  const response = await prisma.response.upsert({
+    where: { participantId_questionId: { participantId, questionId: question.id } },
+    update: {
+      answerId: answer.id,
+      isCorrect: answer.isCorrect && points > 0,
+      responseTimeMs,
+      points,
+      createdAt: new Date()
+    },
+    create: {
       participantId,
       questionId: question.id,
       answerId: answer.id,
@@ -217,10 +234,11 @@ export async function submitAnswer(participantId: string, answerOrder: number) {
     }
   });
 
-  if (points > 0) {
+  const scoreDelta = points - (previousResponse?.points ?? 0);
+  if (scoreDelta !== 0) {
     await prisma.participant.update({
       where: { id: participant.id },
-      data: { score: { increment: points } }
+      data: { score: { increment: scoreDelta } }
     });
   }
 
@@ -259,6 +277,10 @@ async function getSessionWithQuiz(code: string): Promise<SessionWithQuiz> {
 
   if (!session) throw new Error("Session introuvable.");
   return session;
+}
+
+function sanitizeSessionName(name?: string) {
+  return name?.trim().replace(/\s+/g, " ").slice(0, 120) ?? "";
 }
 
 function getCurrentQuestion(session: SessionWithQuiz) {

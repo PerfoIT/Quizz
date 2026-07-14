@@ -68,7 +68,7 @@ export default function PlayerPage() {
   useSocketEvent<{ message: string }>("error", (payload) => setError(payload.message));
 
   function answer(answerOrder: number) {
-    if (!participantId || selected) return;
+    if (!participantId) return;
     setSelected(answerOrder);
     socket.emit("player:answer", { participantId, answerOrder }, (ack: SocketAck<{ points: number; isCorrect: boolean; snapshot: SessionSnapshot }>) => {
       if (!ack.ok) {
@@ -139,12 +139,12 @@ export default function PlayerPage() {
                   <img src={snapshot.currentQuestion.imageUrl} alt="" className="mt-4 max-h-56 w-full rounded-lg object-cover" />
                 )}
                 <div className="mt-5">
-                  <AnswerGrid answers={snapshot.currentQuestion.answers} selected={selected} onSelect={answer} disabled={Boolean(selected)} />
+                  <AnswerGrid answers={snapshot.currentQuestion.answers} selected={selected} onSelect={answer} />
                 </div>
                 {selected && (
                   <div className="mt-5 flex items-center gap-3 rounded-lg border border-white/10 bg-white/10 p-4 text-slate-100">
                     <CheckCircle2 className="h-6 w-6 text-perfo-cyan" />
-                    Reponse envoyee
+                    Reponse envoyee. Vous pouvez la modifier jusqu'a la fin du chrono.
                   </div>
                 )}
               </div>

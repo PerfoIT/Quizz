@@ -73,11 +73,12 @@ async function main() {
 
   const quiz = await prisma.quiz.upsert({
     where: { id: "demo-perfo-ai" },
-    update: { ownerId: admin.id, visibility: "ORGANIZATION" },
+    update: { ownerId: admin.id, visibility: "ORGANIZATION", paceMode: "AUTO" },
     create: {
       id: "demo-perfo-ai",
       ownerId: admin.id,
       visibility: "ORGANIZATION",
+      paceMode: "AUTO",
       title: "Seminaire IA PERFO",
       description: "Quiz de demonstration pour animer un seminaire interne sur l'intelligence artificielle."
     }

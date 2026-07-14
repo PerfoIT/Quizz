@@ -5,6 +5,7 @@ export type PublicQuiz = {
   title: string;
   description: string | null;
   questionCount: number;
+  paceMode: "AUTO" | "MANUAL";
 };
 
 export type PublicParticipant = {
@@ -43,6 +44,7 @@ export type LeaderboardEntry = {
 
 export type SessionSnapshot = {
   code: string;
+  name: string;
   status: SessionStatus;
   currentQuestionIndex: number;
   questionStartedAt: string | null;

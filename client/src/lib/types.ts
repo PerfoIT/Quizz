@@ -5,6 +5,7 @@ export type Quiz = {
   title: string;
   description: string | null;
   questionCount: number;
+  paceMode: "AUTO" | "MANUAL";
 };
 
 export type AuthUser = {
@@ -44,6 +45,7 @@ export type LeaderboardEntry = {
 
 export type SessionSnapshot = {
   code: string;
+  name: string;
   status: SessionStatus;
   currentQuestionIndex: number;
   questionStartedAt: string | null;
@@ -88,9 +90,21 @@ export type AdminQuiz = {
   id: string;
   owner?: { name: string; email: string };
   visibility: "PRIVATE" | "ORGANIZATION";
+  paceMode: "AUTO" | "MANUAL";
   title: string;
   description: string | null;
   createdAt: string;
   questions: PublicQuestion[];
   tagLabels?: string[];
+};
+
+export type SessionHistoryItem = {
+  id: string;
+  code: string;
+  name: string;
+  status: SessionStatus;
+  quizTitle: string;
+  participantCount: number;
+  createdAt: string;
+  leaderboard: LeaderboardEntry[];
 };

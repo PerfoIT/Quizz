@@ -10,13 +10,14 @@ import {
   createUser,
   fetchAdminQuizzes,
   fetchBankQuestions,
+  fetchSessionHistory,
   getAuthToken,
   updateBankQuestion,
   updateAdminQuiz
 } from "../lib/api";
-import type { AdminQuiz, BankQuestion } from "../lib/types";
+import type { AdminQuiz, BankQuestion, SessionHistoryItem } from "../lib/types";
 
-type Tab = "questions" | "quizzes" | "users";
+type Tab = "questions" | "quizzes" | "history" | "users";
 type Visibility = "PRIVATE" | "ORGANIZATION";
 type DraftAnswer = { text: string; imageUrl: string; isCorrect: boolean };
 
@@ -32,6 +33,7 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<Tab>("questions");
   const [questions, setQuestions] = useState<BankQuestion[]>([]);
   const [quizzes, setQuizzes] = useState<AdminQuiz[]>([]);
+  const [history, setHistory] = useState<SessionHistoryItem[]>([]);
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>([]);
   const [editingQuizId, setEditingQuizId] = useState<string | null>(null);
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
@@ -53,6 +55,7 @@ export default function AdminPage() {
     title: "",
     description: "",
     visibility: "PRIVATE" as Visibility,
+    paceMode: "AUTO" as "AUTO" | "MANUAL",
     tagsText: ""
   });
   const [userDraft, setUserDraft] = useState({
@@ -73,12 +76,14 @@ export default function AdminPage() {
 
   async function refresh(nextToken = adminToken) {
     try {
-      const [nextQuestions, nextQuizzes] = await Promise.all([
+      const [nextQuestions, nextQuizzes, nextHistory] = await Promise.all([
         fetchBankQuestions(nextToken),
-        fetchAdminQuizzes(nextToken)
+        fetchAdminQuizzes(nextToken),
+        fetchSessionHistory()
       ]);
       setQuestions(nextQuestions);
       setQuizzes(nextQuizzes);
+      setHistory(nextHistory);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Chargement impossible.");
     }
@@ -131,6 +136,7 @@ export default function AdminPage() {
       title: quizDraft.title,
       description: quizDraft.description,
       visibility: quizDraft.visibility,
+      paceMode: quizDraft.paceMode,
       tags: parseTags(quizDraft.tagsText),
       questionIds: selectedQuestionIds
     };
@@ -169,6 +175,7 @@ export default function AdminPage() {
       title: quiz.title,
       description: quiz.description ?? "",
       visibility: quiz.visibility,
+      paceMode: quiz.paceMode,
       tagsText: quiz.tagLabels?.join(", ") ?? ""
     });
     setSelectedQuestionIds(
@@ -217,7 +224,7 @@ export default function AdminPage() {
 
   function resetQuizForm() {
     setEditingQuizId(null);
-    setQuizDraft({ title: "", description: "", visibility: "PRIVATE", tagsText: "" });
+    setQuizDraft({ title: "", description: "", visibility: "PRIVATE", paceMode: "AUTO", tagsText: "" });
     setSelectedQuestionIds([]);
   }
 
@@ -269,6 +276,7 @@ export default function AdminPage() {
         <nav className="mt-6 flex flex-wrap gap-2">
           <TabButton active={activeTab === "questions"} onClick={() => setActiveTab("questions")}>Questions</TabButton>
           <TabButton active={activeTab === "quizzes"} onClick={() => setActiveTab("quizzes")}>Quiz</TabButton>
+          <TabButton active={activeTab === "history"} onClick={() => setActiveTab("history")}>Historique</TabButton>
           <TabButton active={activeTab === "users"} onClick={() => setActiveTab("users")}>Utilisateurs</TabButton>
         </nav>
 
@@ -377,6 +385,10 @@ export default function AdminPage() {
                   <option value="PRIVATE">Prive</option>
                   <option value="ORGANIZATION">Partage avec les formateurs</option>
                 </select>
+                <select value={quizDraft.paceMode} onChange={(event) => setQuizDraft({ ...quizDraft, paceMode: event.target.value as "AUTO" | "MANUAL" })} className="admin-select">
+                  <option value="AUTO">Rythme automatique</option>
+                  <option value="MANUAL">Rythme manuel</option>
+                </select>
                 <input className="admin-input" placeholder="Etiquettes du quiz" value={quizDraft.tagsText} onChange={(event) => setQuizDraft({ ...quizDraft, tagsText: event.target.value })} />
               </div>
 
@@ -405,6 +417,7 @@ export default function AdminPage() {
                       <div className="text-xl font-black">{quiz.title}</div>
                       <div className="mt-1 text-sm text-slate-300">
                         {quiz.questions.length} question(s) - {quiz.visibility === "ORGANIZATION" ? "Partage" : "Prive"}
+                        {" "} - {quiz.paceMode === "AUTO" ? "Automatique" : "Manuel"}
                       </div>
                       {quiz.description && <p className="mt-2 text-sm text-slate-300">{quiz.description}</p>}
                     </div>
@@ -417,6 +430,34 @@ export default function AdminPage() {
               ))}
               {quizzes.length === 0 && <Empty text="Aucun quiz disponible." />}
             </div>
+          </section>
+        )}
+
+        {activeTab === "history" && (
+          <section className="mt-5 grid gap-3">
+            {history.map((session) => (
+              <div key={session.id} className="rounded-lg border border-white/10 bg-white/5 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="text-xl font-black">{session.name || session.quizTitle}</div>
+                    <div className="mt-1 text-sm text-slate-300">
+                      {session.quizTitle} - code {session.code} - {session.participantCount} participant(s) - {new Date(session.createdAt).toLocaleString()}
+                    </div>
+                  </div>
+                  <Badge>{session.status}</Badge>
+                </div>
+                {session.leaderboard.length > 0 && (
+                  <div className="mt-4 grid gap-2 md:grid-cols-3">
+                    {session.leaderboard.slice(0, 3).map((entry) => (
+                      <div key={`${session.id}-${entry.rank}`} className="rounded-md bg-white/10 px-3 py-2">
+                        <span className="font-mono text-perfo-cyan">#{entry.rank}</span> {entry.name} - {entry.score} pts
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+            {history.length === 0 && <Empty text="Aucune session dans l'historique." />}
           </section>
         )}
 
