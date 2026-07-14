@@ -108,6 +108,26 @@ function authHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+export async function updateBankQuestion(
+  token: string,
+  questionId: string,
+  payload: {
+    type: BankQuestion["type"];
+    text: string;
+    explanation?: string;
+    imageUrl?: string;
+    timeLimitSeconds: number;
+    visibility: "PRIVATE" | "ORGANIZATION";
+    tags: string[];
+    answers: Array<{ text: string; imageUrl?: string; isCorrect: boolean }>;
+  }
+): Promise<BankQuestion> {
+  return adminFetch(token, `/api/admin/questions/${questionId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload)
+  });
+}
+
 export async function updateAdminQuiz(
   token: string,
   quizId: string,

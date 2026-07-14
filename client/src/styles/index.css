@@ -54,6 +54,34 @@ select {
   box-shadow: 0 0 0 2px #1d6dff;
 }
 
+.million-answer {
+  min-height: 8rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 1rem;
+  background:
+    linear-gradient(135deg, rgba(29, 109, 255, 0.2), rgba(2, 6, 23, 0.92)),
+    #020617;
+}
+
+.answer-tone-1 {
+  background:
+    linear-gradient(135deg, rgba(55, 214, 255, 0.18), rgba(2, 6, 23, 0.92)),
+    #020617;
+}
+
+.answer-tone-2 {
+  background:
+    linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(2, 6, 23, 0.92)),
+    #020617;
+}
+
+.answer-tone-3 {
+  background:
+    linear-gradient(135deg, rgba(237, 50, 31, 0.16), rgba(2, 6, 23, 0.92)),
+    #020617;
+}
+
 .firework {
   position: absolute;
   width: 0.45rem;

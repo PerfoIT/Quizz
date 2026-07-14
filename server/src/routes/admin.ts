@@ -191,6 +191,70 @@ adminRouter.post("/quizzes", async (req, res, next) => {
   }
 });
 
+adminRouter.put("/questions/:id", async (req, res, next) => {
+  try {
+    const user = getAuthedUser(req);
+    const payload = bankQuestionSchema.parse(req.body);
+    const question = await prisma.bankQuestion.findFirst({
+      where: writableWhere(req.params.id, user.id, user.role)
+    });
+
+    if (!question) {
+      res.status(404).json({ error: "Question introuvable ou non modifiable." });
+      return;
+    }
+
+    if (!payload.answers.some((answer) => answer.isCorrect)) {
+      res.status(400).json({ error: "Au moins une bonne reponse est requise." });
+      return;
+    }
+
+    const tagIds = await upsertTags(payload.tags);
+    await prisma.$transaction([
+      prisma.bankQuestionTag.deleteMany({ where: { bankQuestionId: question.id } }),
+      prisma.bankAnswer.deleteMany({ where: { bankQuestionId: question.id } }),
+      prisma.bankQuestion.update({
+        where: { id: question.id },
+        data: {
+          visibility: payload.visibility,
+          type: payload.type,
+          text: payload.text,
+          explanation: payload.explanation ?? "",
+          imageUrl: normalizeOptional(payload.imageUrl),
+          timeLimitSeconds: payload.timeLimitSeconds,
+          answers: {
+            create: payload.answers.map((answer, index) => ({
+              text: answer.text,
+              imageUrl: normalizeOptional(answer.imageUrl),
+              isCorrect: answer.isCorrect,
+              order: index + 1
+            }))
+          },
+          tags: { create: tagIds.map((tagId) => ({ tagId })) }
+        }
+      })
+    ]);
+
+    const updatedQuestion = await prisma.bankQuestion.findUnique({
+      where: { id: question.id },
+      include: {
+        owner: { select: { name: true, email: true } },
+        answers: { orderBy: { order: "asc" } },
+        tags: { include: { tag: true } }
+      }
+    });
+
+    if (!updatedQuestion) {
+      res.status(404).json({ error: "Question introuvable." });
+      return;
+    }
+
+    res.json(withFlatTags(updatedQuestion));
+  } catch (error) {
+    next(error);
+  }
+});
+
 adminRouter.put("/quizzes/:id", async (req, res, next) => {
   try {
     const user = getAuthedUser(req);

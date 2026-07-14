@@ -11,6 +11,7 @@ import {
   fetchAdminQuizzes,
   fetchBankQuestions,
   getAuthToken,
+  updateBankQuestion,
   updateAdminQuiz
 } from "../lib/api";
 import type { AdminQuiz, BankQuestion } from "../lib/types";
@@ -33,6 +34,8 @@ export default function AdminPage() {
   const [quizzes, setQuizzes] = useState<AdminQuiz[]>([]);
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>([]);
   const [editingQuizId, setEditingQuizId] = useState<string | null>(null);
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  const [questionTagFilter, setQuestionTagFilter] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [draft, setDraft] = useState({
@@ -65,6 +68,7 @@ export default function AdminPage() {
 
   if (!token) return <Navigate to="/login" replace />;
   const adminToken = token;
+  const filteredQuestions = filterQuestionsByTags(questions, questionTagFilter);
 
   async function refresh(nextToken = adminToken) {
     try {
@@ -83,7 +87,7 @@ export default function AdminPage() {
     setError("");
     setMessage("");
     try {
-      await createBankQuestion(adminToken, {
+      const payload = {
         type: draft.type,
         text: draft.text,
         explanation: draft.explanation,
@@ -92,7 +96,14 @@ export default function AdminPage() {
         visibility: draft.visibility,
         tags: parseTags(draft.tagsText),
         answers: draft.answers.filter((answer) => answer.text.trim())
-      });
+      };
+      if (editingQuestionId) {
+        await updateBankQuestion(adminToken, editingQuestionId, payload);
+        setMessage("Question modifiee.");
+      } else {
+        await createBankQuestion(adminToken, payload);
+        setMessage("Question ajoutee a la banque.");
+      }
       setDraft({
         type: "QCM",
         text: "",
@@ -103,7 +114,7 @@ export default function AdminPage() {
         tagsText: "",
         answers: defaultAnswers
       });
-      setMessage("Question ajoutee a la banque.");
+      setEditingQuestionId(null);
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Creation impossible.");
@@ -164,6 +175,41 @@ export default function AdminPage() {
     setError("");
   }
 
+  function editQuestion(question: BankQuestion) {
+    setActiveTab("questions");
+    setEditingQuestionId(question.id);
+    setDraft({
+      type: question.type,
+      text: question.text,
+      explanation: question.explanation ?? "",
+      imageUrl: question.imageUrl ?? "",
+      timeLimitSeconds: question.timeLimitSeconds,
+      visibility: question.visibility,
+      tagsText: question.tagLabels?.join(", ") ?? "",
+      answers: normalizeDraftAnswers(question.answers.map((answer) => ({
+        text: answer.text,
+        imageUrl: answer.imageUrl ?? "",
+        isCorrect: answer.isCorrect
+      })))
+    });
+    setMessage("");
+    setError("");
+  }
+
+  function resetQuestionForm() {
+    setEditingQuestionId(null);
+    setDraft({
+      type: "QCM",
+      text: "",
+      explanation: "",
+      imageUrl: "",
+      timeLimitSeconds: 15,
+      visibility: "PRIVATE",
+      tagsText: "",
+      answers: defaultAnswers
+    });
+  }
+
   function resetQuizForm() {
     setEditingQuizId(null);
     setQuizDraft({ title: "", description: "", visibility: "PRIVATE", tagsText: "" });
@@ -222,46 +268,82 @@ export default function AdminPage() {
         </nav>
 
         {activeTab === "questions" && (
-          <section className="mt-5 grid gap-5 lg:grid-cols-[420px_1fr]">
+          <section className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(360px,.75fr)]">
             <div className="glass rounded-lg p-5">
-              <h2 className="text-2xl font-black">Nouvelle question</h2>
-              <div className="mt-4 grid gap-3">
-                <select value={draft.type} onChange={(event) => setDraft({ ...draft, type: event.target.value as BankQuestion["type"] })} className="admin-select">
-                  <option value="QCM">QCM texte</option>
-                  <option value="IMAGE">Image a choisir</option>
-                  <option value="OTHER">Autre</option>
-                </select>
-                <input className="admin-input" placeholder="Question" value={draft.text} onChange={(event) => setDraft({ ...draft, text: event.target.value })} />
-                <input className="admin-input" placeholder="URL image de la question (optionnel)" value={draft.imageUrl} onChange={(event) => setDraft({ ...draft, imageUrl: event.target.value })} />
-                <textarea className="admin-input min-h-24" placeholder="Explication optionnelle" value={draft.explanation} onChange={(event) => setDraft({ ...draft, explanation: event.target.value })} />
-                <select value={draft.visibility} onChange={(event) => setDraft({ ...draft, visibility: event.target.value as Visibility })} className="admin-select">
-                  <option value="PRIVATE">Privee</option>
-                  <option value="ORGANIZATION">Partagee avec les formateurs</option>
-                </select>
-                <input className="admin-input" placeholder="Etiquettes separees par des virgules" value={draft.tagsText} onChange={(event) => setDraft({ ...draft, tagsText: event.target.value })} />
-                <input className="admin-input" type="number" min={5} max={120} value={draft.timeLimitSeconds} onChange={(event) => setDraft({ ...draft, timeLimitSeconds: Number(event.target.value) })} />
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-2xl font-black">{editingQuestionId ? "Modifier une question" : "Nouvelle question"}</h2>
+                  <p className="mt-1 text-sm text-slate-300">Composez la question comme elle sera percue par les participants.</p>
+                </div>
+                {editingQuestionId && (
+                  <button type="button" onClick={resetQuestionForm} className="rounded-md bg-white/10 px-3 py-2 text-sm font-bold hover:bg-white/15">
+                    Annuler
+                  </button>
+                )}
               </div>
-              <div className="mt-5 space-y-3">
-                {draft.answers.map((answer, index) => (
-                  <div key={index} className="rounded-lg border border-white/10 bg-white/5 p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="font-bold">Reponse {index + 1}</span>
-                      <label className="flex items-center gap-2 text-sm text-slate-300">
-                        <input type="checkbox" checked={answer.isCorrect} onChange={(event) => updateAnswer(index, { isCorrect: event.target.checked })} />
-                        Correcte
-                      </label>
+
+              <div className="mt-5 rounded-lg border border-white/10 bg-slate-950/70 p-5">
+                <div className="flex flex-wrap items-center gap-3">
+                  <select value={draft.type} onChange={(event) => setDraft({ ...draft, type: event.target.value as BankQuestion["type"] })} className="admin-select max-w-48">
+                    <option value="QCM">QCM texte</option>
+                    <option value="IMAGE">Image a choisir</option>
+                    <option value="OTHER">Autre</option>
+                  </select>
+                  <select value={draft.visibility} onChange={(event) => setDraft({ ...draft, visibility: event.target.value as Visibility })} className="admin-select max-w-64">
+                    <option value="PRIVATE">Privee</option>
+                    <option value="ORGANIZATION">Partagee avec les formateurs</option>
+                  </select>
+                  <input className="admin-input max-w-32" type="number" min={5} max={120} value={draft.timeLimitSeconds} onChange={(event) => setDraft({ ...draft, timeLimitSeconds: Number(event.target.value) })} />
+                </div>
+
+                <textarea
+                  className="mt-5 w-full resize-none rounded-lg border border-white/10 bg-white/[0.04] p-5 text-center text-2xl font-black leading-tight outline-none ring-perfo-blue focus:ring-2 md:text-4xl"
+                  placeholder="Saisir la question"
+                  value={draft.text}
+                  onChange={(event) => setDraft({ ...draft, text: event.target.value })}
+                />
+                <input className="admin-input mt-3" placeholder="URL image de la question (optionnel)" value={draft.imageUrl} onChange={(event) => setDraft({ ...draft, imageUrl: event.target.value })} />
+                {draft.imageUrl && <img src={draft.imageUrl} alt="" className="mt-4 max-h-52 w-full rounded-lg object-cover" />}
+
+                <div className="mt-5 grid gap-3 md:grid-cols-2">
+                  {draft.answers.map((answer, index) => (
+                    <div key={index} className={`million-answer answer-tone-${index}`}>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="font-mono text-sm font-black text-perfo-cyan">{String.fromCharCode(65 + index)}</span>
+                        <label className="flex items-center gap-2 text-xs font-bold text-slate-300">
+                          <input type="checkbox" checked={answer.isCorrect} onChange={(event) => updateAnswer(index, { isCorrect: event.target.checked })} />
+                          Bonne reponse
+                        </label>
+                      </div>
+                      <input className="mt-3 w-full bg-transparent text-lg font-bold outline-none placeholder:text-slate-500" placeholder={`Reponse ${String.fromCharCode(65 + index)}`} value={answer.text} onChange={(event) => updateAnswer(index, { text: event.target.value })} />
+                      <input className="mt-2 w-full bg-transparent text-sm text-slate-300 outline-none placeholder:text-slate-600" placeholder="URL image optionnelle" value={answer.imageUrl} onChange={(event) => updateAnswer(index, { imageUrl: event.target.value })} />
                     </div>
-                    <input className="admin-input mt-3" placeholder="Texte" value={answer.text} onChange={(event) => updateAnswer(index, { text: event.target.value })} />
-                    <input className="admin-input mt-2" placeholder="URL image optionnelle" value={answer.imageUrl} onChange={(event) => updateAnswer(index, { imageUrl: event.target.value })} />
-                  </div>
-                ))}
+                  ))}
+                </div>
+
+                <div className="mt-5 grid gap-3 md:grid-cols-2">
+                  <textarea className="admin-input min-h-24" placeholder="Explication optionnelle" value={draft.explanation} onChange={(event) => setDraft({ ...draft, explanation: event.target.value })} />
+                  <input className="admin-input" placeholder="Etiquettes separees par des virgules" value={draft.tagsText} onChange={(event) => setDraft({ ...draft, tagsText: event.target.value })} />
+                </div>
               </div>
+
               <button type="button" onClick={saveQuestion} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-md bg-perfo-blue px-4 py-3 font-black shadow-glow">
-                <Plus className="h-4 w-4" /> Ajouter a la banque
+                <Plus className="h-4 w-4" /> {editingQuestionId ? "Enregistrer la question" : "Ajouter a la banque"}
               </button>
             </div>
 
-            <QuestionList questions={questions} selectedQuestionIds={[]} onToggle={() => undefined} selectable={false} />
+            <div className="glass rounded-lg p-5">
+              <h2 className="text-2xl font-black">Banque de questions</h2>
+              <input
+                className="admin-input mt-4"
+                placeholder="Rechercher par etiquettes, ex: ia, securite"
+                value={questionTagFilter}
+                onChange={(event) => setQuestionTagFilter(event.target.value)}
+              />
+              <div className="mt-4">
+                <QuestionList questions={filteredQuestions} selectedQuestionIds={[]} onToggle={() => undefined} onEdit={editQuestion} selectable={false} editable />
+              </div>
+            </div>
           </section>
         )}
 
@@ -348,29 +430,31 @@ function QuestionList({
   questions,
   selectedQuestionIds,
   onToggle,
-  selectable
+  selectable,
+  editable = false,
+  onEdit
 }: {
   questions: BankQuestion[];
   selectedQuestionIds: string[];
   onToggle: (id: string) => void;
   selectable: boolean;
+  editable?: boolean;
+  onEdit?: (question: BankQuestion) => void;
 }) {
   if (questions.length === 0) return <Empty text="Aucune question dans la banque." />;
 
   return (
     <div className="grid max-h-[620px] gap-3 overflow-auto pr-1">
       {questions.map((question) => (
-        <button
+        <div
           key={question.id}
-          type="button"
-          onClick={() => selectable && onToggle(question.id)}
           className={`rounded-lg border p-4 text-left transition ${
             selectedQuestionIds.includes(question.id)
               ? "border-perfo-cyan bg-perfo-blue/20"
               : "border-white/10 bg-white/5 hover:bg-white/10"
           }`}
         >
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="font-black">{question.text}</div>
             <div className="flex flex-wrap gap-2">
               <Badge>{question.type}</Badge>
@@ -379,7 +463,19 @@ function QuestionList({
           </div>
           <div className="mt-2 text-sm text-slate-300">{question.answers.map((answer) => answer.text).join(" / ")}</div>
           {question.tagLabels && question.tagLabels.length > 0 && <Tags labels={question.tagLabels} />}
-        </button>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {selectable && (
+              <button type="button" onClick={() => onToggle(question.id)} className="rounded-md bg-white/10 px-3 py-2 text-sm font-bold hover:bg-white/15">
+                {selectedQuestionIds.includes(question.id) ? "Retirer" : "Ajouter au quiz"}
+              </button>
+            )}
+            {editable && onEdit && (
+              <button type="button" onClick={() => onEdit(question)} className="inline-flex items-center gap-2 rounded-md bg-white/10 px-3 py-2 text-sm font-bold hover:bg-white/15">
+                <Edit3 className="h-4 w-4" /> Modifier
+              </button>
+            )}
+          </div>
+        </div>
       ))}
     </div>
   );
@@ -426,3 +522,19 @@ function parseTags(value: string) {
     .filter(Boolean);
 }
 
+function filterQuestionsByTags(questions: BankQuestion[], filter: string) {
+  const tags = parseTags(filter).map((tag) => tag.toLowerCase());
+  if (tags.length === 0) return questions;
+  return questions.filter((question) => {
+    const questionTags = (question.tagLabels ?? []).map((tag) => tag.toLowerCase());
+    return tags.every((tag) => questionTags.some((questionTag) => questionTag.includes(tag)));
+  });
+}
+
+function normalizeDraftAnswers(answers: DraftAnswer[]) {
+  const nextAnswers = [...answers];
+  while (nextAnswers.length < 4) {
+    nextAnswers.push({ text: "", imageUrl: "", isCorrect: false });
+  }
+  return nextAnswers.slice(0, 6);
+}
