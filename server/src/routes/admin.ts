@@ -48,7 +48,7 @@ adminRouter.use(requireAuth);
 
 adminRouter.get("/questions", async (req, res, next) => {
   try {
-    const user = (req as AuthenticatedRequest).user;
+    const user = getAuthedUser(req);
     const questions = await prisma.bankQuestion.findMany({
       where: accessibleWhere(user.id),
       include: {
@@ -66,7 +66,7 @@ adminRouter.get("/questions", async (req, res, next) => {
 
 adminRouter.post("/questions", async (req, res, next) => {
   try {
-    const user = (req as AuthenticatedRequest).user;
+    const user = getAuthedUser(req);
     const payload = bankQuestionSchema.parse(req.body);
     if (!payload.answers.some((answer) => answer.isCorrect)) {
       res.status(400).json({ error: "Au moins une bonne reponse est requise." });
@@ -108,7 +108,7 @@ adminRouter.post("/questions", async (req, res, next) => {
 
 adminRouter.get("/quizzes", async (req, res, next) => {
   try {
-    const user = (req as AuthenticatedRequest).user;
+    const user = getAuthedUser(req);
     const quizzes = await prisma.quiz.findMany({
       where: accessibleWhere(user.id),
       include: {
@@ -129,7 +129,7 @@ adminRouter.get("/quizzes", async (req, res, next) => {
 
 adminRouter.post("/quizzes", async (req, res, next) => {
   try {
-    const user = (req as AuthenticatedRequest).user;
+    const user = getAuthedUser(req);
     const payload = quizSchema.parse(req.body);
     const bankQuestions = await prisma.bankQuestion.findMany({
       where: { id: { in: payload.questionIds }, ...accessibleWhere(user.id) },
@@ -193,7 +193,7 @@ adminRouter.post("/quizzes", async (req, res, next) => {
 
 adminRouter.put("/quizzes/:id", async (req, res, next) => {
   try {
-    const user = (req as AuthenticatedRequest).user;
+    const user = getAuthedUser(req);
     const payload = quizSchema.parse(req.body);
     const quiz = await prisma.quiz.findFirst({
       where: writableWhere(req.params.id, user.id, user.role)
@@ -311,6 +311,10 @@ function accessibleWhere(userId: string) {
   return {
     OR: [{ ownerId: userId }, { visibility: "ORGANIZATION" as const }]
   };
+}
+
+function getAuthedUser(req: unknown) {
+  return (req as AuthenticatedRequest).user;
 }
 
 function writableWhere(id: string, userId: string, role: "ADMIN" | "TRAINER") {
