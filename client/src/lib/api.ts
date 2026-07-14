@@ -99,7 +99,7 @@ async function adminFetch<T>(token: string, path: string, init?: RequestInit): P
   return data;
 }
 
-function authHeaders() {
+function authHeaders(): Record<string, string> {
   const token = getAuthToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
