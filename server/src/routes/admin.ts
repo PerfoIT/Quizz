@@ -24,6 +24,7 @@ const bankQuestionSchema = z.object({
   explanation: z.string().trim().max(1200).optional().or(z.literal("")),
   imageUrl: z.string().trim().url().optional().or(z.literal("")),
   timeLimitSeconds: z.number().int().min(5).max(120).default(15),
+  scoringGraceSeconds: z.number().int().min(0).max(120).default(6),
   visibility: visibilitySchema,
   tags: z.array(z.string().trim().min(1).max(40)).max(12).default([]),
   answers: z.array(answerSchema).min(2).max(6)
@@ -83,6 +84,7 @@ adminRouter.post("/questions", async (req, res, next) => {
         explanation: payload.explanation ?? "",
         imageUrl: normalizeOptional(payload.imageUrl),
         timeLimitSeconds: payload.timeLimitSeconds,
+        scoringGraceSeconds: normalizeGraceSeconds(payload.scoringGraceSeconds, payload.timeLimitSeconds),
         answers: {
           create: payload.answers.map((answer, index) => ({
             text: answer.text,
@@ -163,6 +165,7 @@ adminRouter.post("/quizzes", async (req, res, next) => {
             explanation: question.explanation ?? "",
             imageUrl: question.imageUrl,
             timeLimitSeconds: question.timeLimitSeconds,
+            scoringGraceSeconds: question.scoringGraceSeconds,
             order: questionIndex,
             answers: {
               create: question.answers.map((answer) => ({
@@ -222,6 +225,7 @@ adminRouter.put("/questions/:id", async (req, res, next) => {
           explanation: payload.explanation ?? "",
           imageUrl: normalizeOptional(payload.imageUrl),
           timeLimitSeconds: payload.timeLimitSeconds,
+          scoringGraceSeconds: normalizeGraceSeconds(payload.scoringGraceSeconds, payload.timeLimitSeconds),
           answers: {
             create: payload.answers.map((answer, index) => ({
               text: answer.text,
@@ -303,6 +307,7 @@ adminRouter.put("/quizzes/:id", async (req, res, next) => {
               explanation: question.explanation ?? "",
               imageUrl: question.imageUrl,
               timeLimitSeconds: question.timeLimitSeconds,
+              scoringGraceSeconds: question.scoringGraceSeconds,
               order: questionIndex,
               answers: {
                 create: question.answers.map((answer) => ({
@@ -409,4 +414,8 @@ function withFlatTags<T extends { tags?: Array<{ tag: { label: string } }> }>(en
 function normalizeOptional(value?: string) {
   const clean = value?.trim();
   return clean ? clean : null;
+}
+
+function normalizeGraceSeconds(scoringGraceSeconds: number, timeLimitSeconds: number) {
+  return Math.min(scoringGraceSeconds, timeLimitSeconds);
 }

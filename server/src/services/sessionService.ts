@@ -20,12 +20,18 @@ export function sanitizeName(name: string) {
   return name.trim().replace(/\s+/g, " ").slice(0, 60);
 }
 
-export function calculatePoints(isCorrect: boolean, responseTimeMs: number, timeLimitSeconds: number) {
+export function calculatePoints(
+  isCorrect: boolean,
+  responseTimeMs: number,
+  timeLimitSeconds: number,
+  scoringGraceSeconds: number
+) {
   if (!isCorrect) return 0;
   const timeLimitMs = timeLimitSeconds * 1000;
   if (responseTimeMs > timeLimitMs) return 0;
-  if (responseTimeMs <= 6000) return 1000;
-  const penaltySteps = Math.ceil((responseTimeMs - 6000) / 1000);
+  const graceMs = scoringGraceSeconds * 1000;
+  if (responseTimeMs <= graceMs) return 1000;
+  const penaltySteps = Math.ceil((responseTimeMs - graceMs) / 1000);
   return Math.max(0, 1000 - penaltySteps * 100);
 }
 
@@ -193,7 +199,12 @@ export async function submitAnswer(participantId: string, answerOrder: number) {
   if (!answer) throw new Error("Reponse introuvable.");
 
   const responseTimeMs = Date.now() - participant.session.questionStartedAt.getTime();
-  const points = calculatePoints(answer.isCorrect, responseTimeMs, question.timeLimitSeconds);
+  const points = calculatePoints(
+    answer.isCorrect,
+    responseTimeMs,
+    question.timeLimitSeconds,
+    question.scoringGraceSeconds
+  );
 
   const response = await prisma.response.create({
     data: {
@@ -262,6 +273,7 @@ function toPublicQuestion(question: Question & { answers: Answer[] }): PublicQue
     text: question.text,
     imageUrl: question.imageUrl,
     timeLimitSeconds: question.timeLimitSeconds,
+    scoringGraceSeconds: question.scoringGraceSeconds,
     answers: question.answers
       .sort((a, b) => a.order - b.order)
       .map((answer) => ({ order: answer.order, text: answer.text, imageUrl: answer.imageUrl }))

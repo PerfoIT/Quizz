@@ -78,6 +78,7 @@ model BankQuestion {
   explanation      String
   imageUrl         String?
   timeLimitSeconds Int          @default(15)
+  scoringGraceSeconds Int       @default(6)
   createdAt        DateTime     @default(now())
   owner            User?        @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   answers          BankAnswer[]
@@ -118,6 +119,7 @@ model Question {
   explanation      String
   imageUrl         String?
   timeLimitSeconds Int
+  scoringGraceSeconds Int       @default(6)
   order            Int
   quiz             Quiz       @relation(fields: [quizId], references: [id], onDelete: Cascade)
   answers          Answer[]

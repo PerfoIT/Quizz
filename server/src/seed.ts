@@ -92,7 +92,8 @@ async function main() {
         type: "QCM",
         text: question.text,
         explanation: question.explanation,
-        timeLimitSeconds: 15
+        timeLimitSeconds: 15,
+        scoringGraceSeconds: 6
       },
       create: {
         id: `demo-bank-question-${index + 1}`,
@@ -101,7 +102,8 @@ async function main() {
         type: "QCM",
         text: question.text,
         explanation: question.explanation,
-        timeLimitSeconds: 15
+        timeLimitSeconds: 15,
+        scoringGraceSeconds: 6
       }
     });
 
@@ -125,7 +127,8 @@ async function main() {
         type: "QCM",
         text: question.text,
         explanation: question.explanation,
-        timeLimitSeconds: 15
+        timeLimitSeconds: 15,
+        scoringGraceSeconds: 6
       },
       create: {
         quizId: quiz.id,
@@ -134,7 +137,8 @@ async function main() {
         order: index,
         text: question.text,
         explanation: question.explanation,
-          timeLimitSeconds: 15
+          timeLimitSeconds: 15,
+          scoringGraceSeconds: 6
       }
     });
 

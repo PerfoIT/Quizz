@@ -72,6 +72,7 @@ export async function createBankQuestion(
     explanation: string;
     imageUrl?: string;
     timeLimitSeconds: number;
+    scoringGraceSeconds: number;
     visibility: "PRIVATE" | "ORGANIZATION";
     tags: string[];
     answers: Array<{ text: string; imageUrl?: string; isCorrect: boolean }>;
@@ -131,6 +132,7 @@ export async function updateBankQuestion(
     explanation?: string;
     imageUrl?: string;
     timeLimitSeconds: number;
+    scoringGraceSeconds: number;
     visibility: "PRIVATE" | "ORGANIZATION";
     tags: string[];
     answers: Array<{ text: string; imageUrl?: string; isCorrect: boolean }>;

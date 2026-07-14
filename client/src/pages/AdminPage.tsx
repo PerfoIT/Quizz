@@ -44,6 +44,7 @@ export default function AdminPage() {
     explanation: "",
     imageUrl: "",
     timeLimitSeconds: 15,
+    scoringGraceSeconds: 6,
     visibility: "PRIVATE" as Visibility,
     tagsText: "",
     answers: defaultAnswers
@@ -93,6 +94,7 @@ export default function AdminPage() {
         explanation: draft.explanation,
         imageUrl: draft.imageUrl,
         timeLimitSeconds: draft.timeLimitSeconds,
+        scoringGraceSeconds: Math.min(draft.scoringGraceSeconds, draft.timeLimitSeconds),
         visibility: draft.visibility,
         tags: parseTags(draft.tagsText),
         answers: draft.answers.filter((answer) => answer.text.trim())
@@ -110,6 +112,7 @@ export default function AdminPage() {
         explanation: "",
         imageUrl: "",
         timeLimitSeconds: 15,
+        scoringGraceSeconds: 6,
         visibility: "PRIVATE",
         tagsText: "",
         answers: defaultAnswers
@@ -184,6 +187,7 @@ export default function AdminPage() {
       explanation: question.explanation ?? "",
       imageUrl: question.imageUrl ?? "",
       timeLimitSeconds: question.timeLimitSeconds,
+      scoringGraceSeconds: question.scoringGraceSeconds,
       visibility: question.visibility,
       tagsText: question.tagLabels?.join(", ") ?? "",
       answers: normalizeDraftAnswers(question.answers.map((answer) => ({
@@ -204,6 +208,7 @@ export default function AdminPage() {
       explanation: "",
       imageUrl: "",
       timeLimitSeconds: 15,
+      scoringGraceSeconds: 6,
       visibility: "PRIVATE",
       tagsText: "",
       answers: defaultAnswers
@@ -293,7 +298,21 @@ export default function AdminPage() {
                     <option value="PRIVATE">Privee</option>
                     <option value="ORGANIZATION">Partagee avec les formateurs</option>
                   </select>
-                  <input className="admin-input max-w-32" type="number" min={5} max={120} value={draft.timeLimitSeconds} onChange={(event) => setDraft({ ...draft, timeLimitSeconds: Number(event.target.value) })} />
+                  <label className="grid gap-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
+                    Duree question
+                    <input className="admin-input max-w-40" type="number" min={5} max={120} value={draft.timeLimitSeconds} onChange={(event) => setDraft({ ...draft, timeLimitSeconds: Number(event.target.value) })} />
+                  </label>
+                  <label className="grid gap-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
+                    Decrement apres
+                    <input
+                      className="admin-input max-w-40"
+                      type="number"
+                      min={0}
+                      max={draft.timeLimitSeconds}
+                      value={draft.scoringGraceSeconds}
+                      onChange={(event) => setDraft({ ...draft, scoringGraceSeconds: Number(event.target.value) })}
+                    />
+                  </label>
                 </div>
 
                 <textarea

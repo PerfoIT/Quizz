@@ -100,9 +100,14 @@ L'explication d'une question est optionnelle. Si elle est vide, la revelation af
 
 ## Scoring
 
-- Bonne reponse en 6 secondes ou moins: `1000` points
-- Bonne reponse apres 6 secondes: `-100` points par seconde entamee
+- Bonne reponse avant le seuil configure sur la question: `1000` points
+- Bonne reponse apres ce seuil: `-100` points par seconde entamee
 - Mauvaise reponse ou reponse hors delai: `0` point
+
+Chaque question possede deux reglages distincts:
+
+- `Duree question`: temps total disponible pour repondre
+- `Decrement apres`: moment a partir duquel les points commencent a diminuer
 
 ## Developpement local
 

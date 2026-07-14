@@ -26,6 +26,7 @@ export type PublicQuestion = {
   text: string;
   imageUrl: string | null;
   timeLimitSeconds: number;
+  scoringGraceSeconds: number;
   answers: PublicAnswer[];
 };
 
