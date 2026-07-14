@@ -61,6 +61,7 @@ export type SessionWithQuiz = Session & {
     id: string;
     title: string;
     description: string | null;
+    paceMode: "AUTO" | "MANUAL";
     questions: Array<Question & { answers: Answer[] }>;
   };
   participants: Participant[];
