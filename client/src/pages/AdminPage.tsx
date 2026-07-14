@@ -473,10 +473,13 @@ export default function AdminPage() {
                   </div>
                 </div>
                 {session.leaderboard.length > 0 && (
-                  <div className="mt-4 grid gap-2 md:grid-cols-3">
-                    {session.leaderboard.slice(0, 3).map((entry) => (
-                      <div key={`${session.id}-${entry.rank}`} className="rounded-md bg-white/10 px-3 py-2">
-                        <span className="font-mono text-perfo-cyan">#{entry.rank}</span> {entry.name} - {entry.score} pts
+                  <div className="mt-4 grid max-h-96 gap-2 overflow-y-auto pr-1 md:grid-cols-2 xl:grid-cols-3">
+                    {session.leaderboard.map((entry) => (
+                      <div key={`${session.id}-${entry.rank}-${entry.name}`} className="flex items-center justify-between gap-3 rounded-md bg-white/10 px-3 py-2">
+                        <span className="min-w-0 truncate">
+                          <span className="font-mono text-perfo-cyan">#{entry.rank}</span> {entry.name}
+                        </span>
+                        <span className="shrink-0 font-mono font-bold">{entry.score} pts</span>
                       </div>
                     ))}
                   </div>
