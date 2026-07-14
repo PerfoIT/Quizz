@@ -69,6 +69,18 @@ export async function fetchSessionHistory(): Promise<SessionHistoryItem[]> {
   return data;
 }
 
+export async function deleteSessionHistoryItem(sessionId: string): Promise<void> {
+  const response = await fetch(`${serverUrl}/api/sessions/${sessionId}`, {
+    method: "DELETE",
+    headers: authHeaders()
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error ?? "Impossible de supprimer la session.");
+  }
+}
+
 export async function fetchAdminQuizzes(token: string): Promise<AdminQuiz[]> {
   return adminFetch(token, "/api/admin/quizzes");
 }

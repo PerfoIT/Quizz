@@ -1,4 +1,4 @@
-import { Edit3, LogOut, Plus, Save, Users } from "lucide-react";
+import { Edit3, LogOut, Plus, Save, Trash2, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { BrandShell } from "../components/BrandShell";
@@ -8,6 +8,7 @@ import {
   createAdminQuiz,
   createBankQuestion,
   createUser,
+  deleteSessionHistoryItem,
   fetchAdminQuizzes,
   fetchBankQuestions,
   fetchSessionHistory,
@@ -165,6 +166,21 @@ export default function AdminPage() {
       setMessage("Utilisateur cree.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Creation utilisateur impossible.");
+    }
+  }
+
+  async function deleteHistorySession(session: SessionHistoryItem) {
+    const label = session.name || session.quizTitle || session.code;
+    if (!window.confirm(`Supprimer la session "${label}" de l'historique ?`)) return;
+
+    setError("");
+    setMessage("");
+    try {
+      await deleteSessionHistoryItem(session.id);
+      setHistory((items) => items.filter((item) => item.id !== session.id));
+      setMessage("Session supprimee de l'historique.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Suppression impossible.");
     }
   }
 
@@ -444,7 +460,17 @@ export default function AdminPage() {
                       {session.quizTitle} - code {session.code} - {session.participantCount} participant(s) - {new Date(session.createdAt).toLocaleString()}
                     </div>
                   </div>
-                  <Badge>{session.status}</Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge>{session.status}</Badge>
+                    <button
+                      type="button"
+                      onClick={() => deleteHistorySession(session)}
+                      className="rounded-md border border-red-400/30 bg-red-500/15 p-2 text-red-100 hover:bg-red-500/25"
+                      title="Supprimer la session"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
                 {session.leaderboard.length > 0 && (
                   <div className="mt-4 grid gap-2 md:grid-cols-3">

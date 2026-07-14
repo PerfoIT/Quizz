@@ -15,7 +15,7 @@ sessionsRouter.get("/", requireAuth, async (req, res, next) => {
   try {
     const user = (req as unknown as AuthenticatedRequest).user;
     const sessions = await prisma.session.findMany({
-      where: { hostId: user.id },
+      where: user.role === "ADMIN" ? {} : { hostId: user.id },
       include: {
         quiz: { select: { title: true } },
         participants: true
@@ -41,6 +41,26 @@ sessionsRouter.get("/", requireAuth, async (req, res, next) => {
           }))
       }))
     );
+  } catch (error) {
+    next(error);
+  }
+});
+
+sessionsRouter.delete("/:id", requireAuth, async (req, res, next) => {
+  try {
+    const user = (req as unknown as AuthenticatedRequest).user;
+    const session = await prisma.session.findFirst({
+      where: user.role === "ADMIN" ? { id: req.params.id } : { id: req.params.id, hostId: user.id },
+      select: { id: true }
+    });
+
+    if (!session) {
+      res.status(404).json({ error: "Session introuvable ou non supprimable." });
+      return;
+    }
+
+    await prisma.session.delete({ where: { id: session.id } });
+    res.status(204).send();
   } catch (error) {
     next(error);
   }
