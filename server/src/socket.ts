@@ -186,16 +186,17 @@ async function runQuestionCycle(io: Server, sessionCode: string) {
       const revealedQuestion = await getRevealedQuestion(sessionCode);
       io.to(room(sessionCode)).emit("question:revealed", { snapshot: revealSnapshot, revealedQuestion });
 
+      if (revealSnapshot.quiz.paceMode === "MANUAL") {
+        clearSessionTimers(sessionCode);
+        return;
+      }
+
       const nextTimer = setTimeout(async () => {
         try {
           const advancedSnapshot = await nextQuestion(sessionCode);
           if (advancedSnapshot.status === "FINISHED") {
             clearSessionTimers(sessionCode);
             io.to(room(sessionCode)).emit("session:finished", advancedSnapshot);
-            return;
-          }
-          if (revealSnapshot.quiz.paceMode === "MANUAL") {
-            io.to(room(sessionCode)).emit("leaderboard:updated", advancedSnapshot);
             return;
           }
           await runQuestionCycle(io, sessionCode);
