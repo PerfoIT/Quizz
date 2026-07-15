@@ -31,8 +31,10 @@ export function calculatePoints(
   if (responseTimeMs > timeLimitMs) return 0;
   const graceMs = scoringGraceSeconds * 1000;
   if (responseTimeMs <= graceMs) return 1000;
-  const penaltySteps = Math.ceil((responseTimeMs - graceMs) / 1000);
-  return Math.max(0, 1000 - penaltySteps * 100);
+
+  const scoringWindowMs = timeLimitMs - graceMs;
+  const elapsed = responseTimeMs - graceMs;
+  return Math.max(100, Math.round(1000 - (900 * elapsed) / scoringWindowMs));
 }
 
 export async function listQuizzes(userId: string): Promise<PublicQuiz[]> {
